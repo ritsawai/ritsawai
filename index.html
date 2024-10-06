@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เครื่องมือคำนวณค่าเสื่อมโคนม</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
+        th { background-color: #f2f2f2; }
+        input { width: 100px; }
+        .blue-cell { background-color: #e6f3ff; }
+        #calculateBtn { padding: 10px; background-color: #4CAF50; color: white; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>เครื่องมือคำนวณค่าเสื่อมโคนม</h1>
+    <table>
+        <tr>
+            <td>ราคาโคนม/ตัว (บาท)</td>
+            <td><input type="number" id="cowPrice" class="blue-cell" value="45000"></td>
+        </tr>
+        <tr>
+            <td>มูลค่าซาก (บาท)</td>
+            <td><input type="number" id="salvageValue" class="blue-cell" value="10000"></td>
+        </tr>
+        <tr>
+            <td>อายุการให้ผลผลิต (ปี)</td>
+            <td><input type="number" id="productiveYears" class="blue-cell" value="5"></td>
+        </tr>
+        <tr>
+            <td>ปริมาณน้ำนม (กก.)</td>
+            <td>-</td>
+        </tr>
+        <tr>
+            <td>     ท้องที่ 1</td>
+            <td><input type="number" id="milk1" class="blue-cell" value="4000"></td>
+        </tr>
+        <tr>
+            <td>     ท้องที่ 2</td>
+            <td><input type="number" id="milk2" class="blue-cell" value="4500"></td>
+        </tr>
+        <tr>
+            <td>     ท้องที่ 3</td>
+            <td><input type="number" id="milk3" class="blue-cell" value="5000"></td>
+        </tr>
+        <tr>
+            <td>     ท้องที่ 4</td>
+            <td><input type="number" id="milk4" class="blue-cell" value="5500"></td>
+        </tr>
+        <tr>
+            <td>     ท้องที่ 5</td>
+            <td><input type="number" id="milk5" class="blue-cell" value="6000"></td>
+        </tr>
+    </table>
+
+    <button id="calculateBtn" onclick="calculateDepreciation()">คำนวณค่าเสื่อม</button>
+
+    <div id="result"></div>
+
+    <script>
+    function calculateDepreciation() {
+        const cowPrice = parseFloat(document.getElementById('cowPrice').value);
+        const salvageValue = parseFloat(document.getElementById('salvageValue').value);
+        const productiveYears = parseInt(document.getElementById('productiveYears').value);
+        const milkProduction = [
+            parseFloat(document.getElementById('milk1').value),
+            parseFloat(document.getElementById('milk2').value),
+            parseFloat(document.getElementById('milk3').value),
+            parseFloat(document.getElementById('milk4').value),
+            parseFloat(document.getElementById('milk5').value)
+        ];
+
+        const straightLineDepreciation = (cowPrice - salvageValue) / productiveYears;
+        const totalMilk = milkProduction.reduce((a, b) => a + b, 0);
+        const totalDepreciableAmount = cowPrice - salvageValue;
+
+        let resultHTML = '<h2>ผลการคำนวณ</h2>';
+        resultHTML += `<p>ค่าเสื่อมแบบเส้นตรง: ${straightLineDepreciation.toLocaleString('th-TH', {maximumFractionDigits: 0})} บาท</p>`;
+        
+        resultHTML += '<h3>ค่าเสื่อมแบบเส้นตรง</h3>';
+        resultHTML += '<table><tr><th>ท้องที่</th><th>ค่าเสื่อม (บาท)</th><th>มูลค่าคงเหลือ (บาท)</th></tr>';
+        let remainingStraightLine = cowPrice;
+        for (let i = 0; i <= productiveYears; i++) {
+            let depreciation = i === 0 ? 0 : straightLineDepreciation;
+            if (i === productiveYears) {
+                depreciation = remainingStraightLine - salvageValue;
+            }
+            resultHTML += `<tr><td>${i}</td><td>${depreciation.toLocaleString('th-TH', {maximumFractionDigits: 0})}</td><td>${remainingStraightLine.toLocaleString('th-TH', {maximumFractionDigits: 0})}</td></tr>`;
+            remainingStraightLine -= depreciation;
+        }
+        resultHTML += '</table>';
+
+        resultHTML += '<h3>ค่าเสื่อมตามปริมาณผลผลิตนม</h3>';
+        resultHTML += '<table><tr><th>ท้องที่</th><th>ค่าเสื่อม (บาท)</th><th>มูลค่าคงเหลือ (บาท)</th></tr>';
+        
+        let remainingProductionBased = cowPrice;
+        let accumulatedDepreciation = 0;
+        for (let i = 0; i <= productiveYears; i++) {
+            let productionBasedDepreciation;
+            if (i === 0) {
+                productionBasedDepreciation = 0;
+            } else if (i === productiveYears) {
+                productionBasedDepreciation = remainingProductionBased - salvageValue;
+            } else {
+                productionBasedDepreciation = totalDepreciableAmount * (milkProduction[i-1] / totalMilk);
+                // Adjust for rounding errors
+                if (accumulatedDepreciation + productionBasedDepreciation > totalDepreciableAmount) {
+                    productionBasedDepreciation = totalDepreciableAmount - accumulatedDepreciation;
+                }
+            }
+            accumulatedDepreciation += productionBasedDepreciation;
+            resultHTML += `<tr><td>${i}</td><td>${productionBasedDepreciation.toLocaleString('th-TH', {maximumFractionDigits: 0})}</td><td>${remainingProductionBased.toLocaleString('th-TH', {maximumFractionDigits: 0})}</td></tr>`;
+            remainingProductionBased -= productionBasedDepreciation;
+        }
+        resultHTML += '</table>';
+
+        document.getElementById('result').innerHTML = resultHTML;
+    }
+    </script>
+</body>
+</html>
